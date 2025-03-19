@@ -14,6 +14,7 @@
       <el-form inline>
         <el-form-item label="时间：">
           <el-date-picker
+            style="width: 220px"
             v-model="formData.time"
             type="daterange"
             range-separator="至"
@@ -24,7 +25,6 @@
         </el-form-item>
         <el-form-item label="状态：">
           <el-select clearable v-model="formData.status">
-            <el-option label="全部" value=""></el-option>
             <el-option label="待审核" value="pending"></el-option>
             <el-option label="已通过" value="pass"></el-option>
             <el-option label="未通过" value="reject"></el-option>
@@ -162,13 +162,22 @@
       :visible.sync="dialogVisible"
     >
       <template v-if="dialogVisible">
-        <CommentTree
-          v-for="(comment, index) in curPostDetailData.postComments"
-          :key="index"
-          :commentData="comment"
-          @on-hide-comment="handleHideComment"
-          @on-delete-comment="handleDeleteComment"
-        />
+        <div
+          style="
+            height: 700px;
+            overflow-y: auto;
+            padding: 10px 20px;
+            box-sizing: border-box;
+          "
+        >
+          <CommentTree
+            v-for="(comment, index) in curPostDetailData.postComments"
+            :key="index"
+            :commentData="comment"
+            @on-hide-comment="handleHideComment"
+            @on-delete-comment="handleDeleteComment"
+          />
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -205,7 +214,6 @@ export default {
           dayjs().subtract(3, "month").format("YYYY-MM-DD"),
           dayjs().format("YYYY-MM-DD"),
         ],
-        status: "",
       },
 
       total: 0,
@@ -248,8 +256,8 @@ export default {
 
       Object.entries(this.formData).forEach(([k, v]) => {
         if (k === "time") {
-          postData["beginTime"] = v[0];
-          postData["endTime"] = v[1];
+          postData.beginTime = dayjs(v[0]).format("YYYY-MM-DD");
+          postData.endTime = dayjs(v[1]).format("YYYY-MM-DD");
         } else {
           postData[k] = v;
         }
@@ -271,7 +279,6 @@ export default {
       });
 
       this.$message.success(`帖子${status === 1 ? "隐藏" : "展示"}成功！`);
-
       this.queryPostDetail();
     },
 
@@ -287,12 +294,25 @@ export default {
       await hidePostComment(hideData);
       const { data } = await checkPostDetail(this.curPostDetailData.id);
       this.curPostDetailData = data;
+      this.$message.success(
+        `评论${hideData.hideStatus === 1 ? "隐藏" : "展示"}成功！`
+      );
     },
+
     // 删除评论
-    async handleDeleteComment(deleteData) {
-      await deletePostComment(deleteData.id);
-      const { data } = await checkPostDetail(this.curPostDetailData.id);
-      this.curPostDetailData = data;
+    handleDeleteComment(deleteData) {
+      this.$confirm("确认删除这条评论？", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      })
+        .then(async () => {
+          await deletePostComment(deleteData.id);
+          const { data } = await checkPostDetail(this.curPostDetailData.id);
+          this.curPostDetailData = data;
+          this.$message.success(`评论删除成功！`);
+        })
+        .catch(() => {});
     },
   },
 };

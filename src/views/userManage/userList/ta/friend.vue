@@ -14,7 +14,8 @@
       <el-form inline>
         <el-form-item label="时间：">
           <el-date-picker
-            v-model="formData.field1"
+            style="width: 220px"
+            v-model="formData.time"
             type="daterange"
             range-separator="至"
             start-placeholder="开始日期"
@@ -24,96 +25,126 @@
         </el-form-item>
         <el-form-item label="关键信息：">
           <el-input
+            clearable
             style="width: 255px"
             placeholder="用户昵称/姓名/身份证号/绑定手机号"
-            v-model="formData.field2"
+            v-model="formData.searchkeyWord"
           ></el-input>
         </el-form-item>
         <el-form-item label="状态：">
-          <el-select v-model="formData.field3">
-            <el-option label="启用" :value="0"></el-option>
-            <el-option label="禁用" :value="1"></el-option>
+          <el-select clearable v-model="formData.status">
+            <el-option label="正常" :value="0"></el-option>
+            <el-option label="停用" :value="1"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="是否为会员：">
-          <el-select v-model="formData.status">
-            <el-option label="是" :value="0"></el-option>
-            <el-option label="否" :value="1"></el-option>
+          <el-select clearable v-model="formData.vipOpean">
+            <el-option label="是" :value="1"></el-option>
+            <el-option label="否" :value="0"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="是否在黑名单：">
-          <el-select v-model="formData.status">
-            <el-option label="启用" :value="0"></el-option>
-            <el-option label="禁用" :value="1"></el-option>
+          <el-select clearable v-model="formData.hasBlack">
+            <el-option label="是" :value="1"></el-option>
+            <el-option label="否" :value="0"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button style="margin-left: 20px" type="primary">查询</el-button>
+          <el-button
+            style="margin-left: 20px"
+            type="primary"
+            @click="queryFansDetail"
+          >
+            查询
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
 
     <el-table border style="width: 100%" height="600px" :data="tableData">
-      <el-table-column label="时间" prop="field1" align="center" :width="150" />
-      <el-table-column label="ID" prop="field2" align="center" :width="150" />
       <el-table-column
-        label="用户昵称"
-        prop="field3"
+        label="时间"
+        prop="createTime"
         align="center"
         :width="150"
       />
-      <el-table-column label="姓名" prop="field4" align="center" :width="150" />
-      <el-table-column label="性别" prop="field5" align="center" :width="150" />
+      <el-table-column label="ID" prop="appId" align="center" :width="150" />
+      <el-table-column
+        label="用户昵称"
+        prop="nickName"
+        align="center"
+        :width="150"
+      />
+      <el-table-column
+        label="姓名"
+        prop="realName"
+        align="center"
+        :width="150"
+      />
+      <el-table-column label="性别" prop="sex" align="center" :width="150">
+        <template slot-scope="scope">
+          {{ dataMap.sex[scope.row.sex] }}
+        </template>
+      </el-table-column>
       <el-table-column
         label="身份证号"
-        prop="field6"
+        prop="idNumber"
         align="center"
         :width="150"
       />
       <el-table-column
         label="绑定手机号"
-        prop="field7"
+        prop="phonenumber"
         align="center"
         :width="150"
       />
       <el-table-column
         label="是否为会员"
-        prop="field8"
+        prop="vipOpean"
         align="center"
         :width="150"
-      />
+      >
+        <template slot-scope="scope">
+          {{ dataMap.vipOpean[scope.row.vipOpean] }}
+        </template>
+      </el-table-column>
       <el-table-column
         label="会员到期时间"
-        prop="field9"
+        prop="vipExpireTime"
         align="center"
         :width="150"
       />
       <el-table-column
         label="账号状态"
-        prop="field10"
+        prop="status"
         align="center"
         :width="150"
-      />
-      <el-table-column
-        label="是否在黑名单"
-        prop="field11"
-        align="center"
-        :width="150"
-      />
-      <el-table-column
-        label="拉黑理由"
-        prop="field12"
-        align="center"
-        :width="150"
-      />
-      <el-table-column label="操作" align="center" :width="150" fixed="right">
+      >
         <template slot-scope="scope">
-          <el-button type="text" size="small">
-            {{ scope.row.field7 ? "隐藏" : "展示" }}
-          </el-button>
-          <el-button type="text" size="small">查看评论</el-button>
+          <el-switch
+            v-model="scope.row.status"
+            active-value="0"
+            inactive-value="1"
+            @change="(val) => handleChangeUserStatus(val, scope.row)"
+          ></el-switch>
         </template>
       </el-table-column>
+      <el-table-column
+        label="是否在黑名单"
+        prop="hasBlack"
+        align="center"
+        :width="150"
+      >
+        <template slot-scope="scope">
+          {{ dataMap.hasBlack[scope.row.hasBlack] }}
+        </template>
+      </el-table-column>
+      <el-table-column
+        label="拉黑理由"
+        prop="blackReason"
+        align="center"
+        :width="150"
+      ></el-table-column>
     </el-table>
 
     <pagination :total="total" :page.sync="pageNum" :limit.sync="pageSize" />
@@ -121,7 +152,12 @@
 </template>
 
 <script>
-import { getUserDetail, getFansDetail } from "@/api/userManage/userList";
+import dayjs from "dayjs";
+import {
+  getUserDetail,
+  getFansDetail,
+  updateUserStatus,
+} from "@/api/userManage/userList";
 
 export default {
   name: "TaFriend",
@@ -139,6 +175,13 @@ export default {
       pageNum: 1,
       pageSize: 10,
       tableData: [],
+
+      dataMap: {
+        sex: { 0: "女", 1: "男" },
+        vipOpean: { 0: "否", 1: "是" },
+        hasBlack: { 0: "否", 1: "是" },
+        status: { 0: "正常", 1: "停用" },
+      },
     };
   },
 
@@ -159,14 +202,29 @@ export default {
       const postData = {
         pageNum: this.pageNum,
         pageSize: this.pageSize,
-        userId: this.$route.params.id,
+        uid: this.$route.params.id,
       };
+
+      Object.entries(this.formData).forEach(([k, v]) => {
+        if (k === "time") {
+          postData.beginTime = dayjs(v[0]).format("YYYY-MM-DD");
+          postData.endTime = dayjs(v[1]).format("YYYY-MM-DD");
+        } else {
+          postData[k] = v;
+        }
+      });
 
       const { rows, total } = await getFansDetail(postData);
 
       this.tableData = rows;
       this.total = total;
       this.loading = false;
+    },
+
+    async handleChangeUserStatus(val, rowData) {
+      await updateUserStatus({ ...rowData, status: val });
+      this.queryFansDetail();
+      this.$message.success(val === "0" ? "账号启用成功！" : "账号禁用成功！");
     },
   },
 };

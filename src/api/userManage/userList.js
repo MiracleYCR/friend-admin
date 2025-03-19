@@ -47,7 +47,7 @@ export const getInviteDetail = (postData) => {
 // 获取Ta的关注
 export const getFollowDetail = (postData) => {
   return request({
-    url: "/system/app/user/get-invite",
+    url: "/system/app/user/get-follow",
     method: "post",
     data: postData,
   });
@@ -56,7 +56,7 @@ export const getFollowDetail = (postData) => {
 // 获取Ta的粉丝
 export const getFansDetail = (postData) => {
   return request({
-    url: "/system/app/user/get-invite",
+    url: "/system/app/user/get-fans",
     method: "post",
     data: postData,
   });
